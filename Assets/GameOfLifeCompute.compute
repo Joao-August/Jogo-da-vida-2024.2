@@ -1,0 +1,40 @@
+#pragma kernel CSMain
+
+RWTexture2D<float4> Result; // Buffer para armazenar a saída
+RWStructuredBuffer<int> Grid; // Buffer de entrada/saída da grade
+int Width;
+int Height;
+
+[numthreads(8, 8, 1)]
+void CSMain(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= Width || id.y >= Height) return;
+
+    int aliveNeighbors = 0;
+    int index = id.y * Width + id.x;
+
+    // Contagem dos vizinhos vivos
+    for (int i = -1; i <= 1; i++)
+    {
+        for (int j = -1; j <= 1; j++)
+        {
+            if (i == 0 && j == 0) continue;
+            int nx = id.x + i;
+            int ny = id.y + j;
+            if (nx >= 0 && nx < Width && ny >= 0 && ny < Height)
+            {
+                int neighborIndex = ny * Width + nx;
+                aliveNeighbors += Grid[neighborIndex];
+            }
+        }
+    }
+
+    // Aplicação das regras do Game of Life
+    int newState = (Grid[index] == 1 && (aliveNeighbors == 2 || aliveNeighbors == 3)) || (Grid[index] == 0 && aliveNeighbors == 3) ? 1 : 0;
+
+    // Armazena o novo estado
+    Grid[index] = newState;
+
+    // Atualiza a textura para visualização (preto para vivo, branco para morto)
+    Result[id.xy] = newState == 1 ? float4(0, 0, 0, 1) : float4(1, 1, 1, 1);
+}
